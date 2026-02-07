@@ -1,161 +1,272 @@
 <!DOCTYPE html>
 <html>
+
 <head>
-<meta charset="utf-8">
-<title>Seattle Crime Map</title>
-<meta name="viewport" content="initial-scale=1,maximum-scale=1,user-scalable=no">
+    <title>Seattle Crime Map – UW Area</title>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link href="https://api.mapbox.com/mapbox-gl-js/v2.8.1/mapbox-gl.css" rel="stylesheet">
 
-<link href="https://api.mapbox.com/mapbox-gl-js/v2.15.0/mapbox-gl.css" rel="stylesheet">
-<script src="https://api.mapbox.com/mapbox-gl-js/v2.15.0/mapbox-gl.js"></script>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+        }
 
-<style>
-body { margin: 0; padding: 0; }
-#map { position: absolute; top: 0; bottom: 0; width: 100%; }
+        #map {
+            position: absolute;
+            top: 0;
+            bottom: 0;
+            width: 100%;
+        }
 
-#menu {
-    position: absolute;
-    background: #fff;
-    padding: 10px;
-    font-family: Arial, sans-serif;
-    top: 10px;
-    right: 10px;
-    border-radius: 4px;
-    box-shadow: 0 0 5px rgba(0,0,0,0.3);
-}
+        #menu {
+            background: #fff;
+            position: absolute;
+            z-index: 1;
+            top: 10px;
+            right: 10px;
+            border-radius: 3px;
+            width: 160px;
+            border: 1px solid rgba(0, 0, 0, 0.4);
+            font-family: 'Open Sans', sans-serif;
+        }
 
-#menu a {
-    display: block;
-    margin-bottom: 5px;
-    padding: 6px;
-    text-decoration: none;
-    background: #eee;
-    color: #000;
-    border-radius: 3px;
-    font-size: 13px;
-}
+        #menu a {
+            font-size: 13px;
+            color: #404040;
+            display: block;
+            padding: 10px;
+            text-decoration: none;
+            border-bottom: 1px solid rgba(0, 0, 0, 0.25);
+            text-align: center;
+        }
 
-#menu a.active {
-    background: #3887be;
-    color: #fff;
-}
-</style>
+        #menu a:last-child {
+            border: none;
+        }
+
+        #menu a:hover {
+            background-color: #f8f8f8;
+        }
+
+        #menu a.active {
+            background-color: #3887be;
+            color: #ffffff;
+        }
+
+        #menu a.active:hover {
+            background: #3074a4;
+        }
+
+        /* Layer switcher specific styles */
+        .layer-switcher {
+            padding: 10px;
+            border-bottom: 1px solid rgba(0, 0, 0, 0.25);
+        }
+
+        .layer-switcher h3 {
+            margin: 0 0 8px 0;
+            font-size: 14px;
+            text-align: center;
+            color: #404040;
+        }
+
+        .layer-control {
+            display: flex;
+            align-items: center;
+            margin-bottom: 5px;
+            padding: 4px 0;
+            cursor: pointer;
+        }
+
+        .layer-control:last-child {
+            margin-bottom: 0;
+        }
+
+        .layer-control input[type="checkbox"] {
+            margin-right: 8px;
+            cursor: pointer;
+        }
+
+        .layer-control label {
+            font-size: 12px;
+            color: #404040;
+            cursor: pointer;
+            flex-grow: 1;
+        }
+
+        /* Title Box */
+        #title {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            background: white;
+            padding: 10px;
+            border-radius: 3px;
+            z-index: 1;
+            font-weight: bold;
+        }
+
+        /* Description Box */
+        #description {
+            position: absolute;
+            bottom: 10px;
+            left: 10px;
+            background: white;
+            padding: 10px;
+            border-radius: 3px;
+            z-index: 1;
+            width: 260px;
+            font-size: 13px;
+        }
+    </style>
+
+    <script src="https://api.mapbox.com/mapbox-gl-js/v2.8.1/mapbox-gl.js"></script>
 </head>
 
 <body>
 
-<nav id="menu"></nav>
-<div id="map"></div>
+    <div id="title">Seattle Crime Map – UW Study Area</div>
 
-<script>
-mapboxgl.accessToken = 'pk.eyJ1IjoidmFtaWthZ29lbCIsImEiOiJjbWxiZGFpdjkwbHR1M2ZzOXZzdDA1aHc0In0.NJ-x0kZxeRad7lUM9BDi6Q';
+    <div id="description">
+        Violent crime incidents (Feb 2025 – Feb 2026) visualized using custom
+        basemaps and thematic tile layers. Toggle layers using the menu.
+    </div>
 
-const map = new mapboxgl.Map({
-    container: 'map',
-    style: 'mapbox://styles/mapbox/light-v10',
-    center: [-122.3035, 47.6553],
-    zoom: 13
-});
+    <nav id="menu"></nav>
+    <div id='map'></div>
 
-map.addControl(new mapboxgl.NavigationControl());
-map.addControl(new mapboxgl.ScaleControl());
+    <script type="text/javascript">
+        mapboxgl.accessToken = 'pk.eyJ1IjoidmFtaWthZ29lbCIsImEiOiJjbWxiZGFpdjkwbHR1M2ZzOXZzdDA1aHc0In0.NJ-x0kZxeRad7lUM9BDi6Q';
 
-map.on('load', () => {
+        let map = new mapboxgl.Map({
+            container: 'map',
+            style: 'mapbox://styles/mapbox/light-v10',
+            zoom: 13,
+            center: [-122.3035, 47.6553]
+        });
 
-    // SOURCES
-    map.addSource('tileset1', {
-        type: 'raster',
-        tiles: ['assets/tileset_1/{z}/{x}/{y}.png'],
-        tileSize: 256
-    });
+        // Add controls (extra marks)
+        map.addControl(new mapboxgl.NavigationControl());
+        map.addControl(new mapboxgl.ScaleControl());
 
-    map.addSource('tileset2', {
-        type: 'raster',
-        tiles: ['assets/tileset_2/{z}/{x}/{y}.png'],
-        tileSize: 256
-    });
+        map.on('load', () => {
 
-    map.addSource('tileset3', {
-        type: 'raster',
-        tiles: ['assets/tileset_3/{z}/{x}/{y}.png'],
-        tileSize: 256
-    });
+            map.addSource('tileset1', {
+                'type': 'raster',
+                'tiles': ['assets/tileset_1/{z}/{x}/{y}.png'],
+                'tileSize': 256,
+                'attribution': 'Basemap © Mapbox modified by Trevor'
+            });
 
-    map.addSource('tileset4', {
-        type: 'raster',
-        tiles: ['assets/tileset_4/{z}/{x}/{y}.png'],
-        tileSize: 256
-    });
+            map.addSource('tileset2', {
+                'type': 'raster',
+                'tiles': ['assets/tileset_2/{z}/{x}/{y}.png'],
+                'tileSize': 256,
+                'attribution': 'Crime Data © Seattle Police Department'
+            });
 
-    // LAYERS
-    map.addLayer({
-        id: 'Basemap',
-        type: 'raster',
-        source: 'tileset1',
-        layout: { visibility: 'visible' }
-    });
+            map.addSource('tileset3', {
+                'type': 'raster',
+                'tiles': ['assets/tileset_3/{z}/{x}/{y}.png'],
+                'tileSize': 256,
+                'attribution': 'Basemap + Crime Data'
+            });
 
-    map.addLayer({
-        id: 'Crime Data',
-        type: 'raster',
-        source: 'tileset2',
-        layout: { visibility: 'none' }
-    });
+            map.addSource('tileset4', {
+                'type': 'raster',
+                'tiles': ['assets/tileset_4/{z}/{x}/{y}.png'],
+                'tileSize': 256,
+                'attribution': 'Crime Hotspots Theme'
+            });
 
-    map.addLayer({
-        id: 'Basemap + Crime',
-        type: 'raster',
-        source: 'tileset3',
-        layout: { visibility: 'none' }
-    });
+            map.addLayer({ 'id': 'Basemap', 'type': 'raster', 'source': 'tileset1', 'layout': { 'visibility': 'none' } });
+            map.addLayer({ 'id': 'Crime Data', 'type': 'raster', 'source': 'tileset2', 'layout': { 'visibility': 'none' } });
+            map.addLayer({ 'id': 'Basemap + Crime', 'type': 'raster', 'source': 'tileset3', 'layout': { 'visibility': 'none' } });
+            map.addLayer({ 'id': 'Crime Hotspots', 'type': 'raster', 'source': 'tileset4', 'layout': { 'visibility': 'none' } });
 
-    map.addLayer({
-        id: 'Crime Hotspots',
-        type: 'raster',
-        source: 'tileset4',
-        layout: { visibility: 'none' }
-    });
-});
+        });
 
+        map.on('idle', () => {
 
-// LECTURER-STYLE LAYER TOGGLE
-map.on('idle', () => {
-
-    const toggleableLayerIds = [
-        'Basemap',
-        'Crime Data',
-        'Basemap + Crime',
-        'Crime Hotspots'
-    ];
-
-    for (const id of toggleableLayerIds) {
-
-        if (document.getElementById(id)) continue;
-
-        const link = document.createElement('a');
-        link.id = id;
-        link.href = '#';
-        link.textContent = id;
-        link.className = map.getLayoutProperty(id, 'visibility') === 'visible' ? 'active' : '';
-
-        link.onclick = function (e) {
-            e.preventDefault();
-            e.stopPropagation();
-
-            const visibility = map.getLayoutProperty(id, 'visibility');
-
-            if (visibility === 'visible') {
-                map.setLayoutProperty(id, 'visibility', 'none');
-                this.className = '';
-            } else {
-                map.setLayoutProperty(id, 'visibility', 'visible');
-                this.className = 'active';
+            if (!map.getLayer('Basemap') || !map.getLayer('Crime Data') || !map.getLayer('Basemap + Crime') || !map.getLayer('Crime Hotspots')) {
+                return;
             }
-        };
 
-        document.getElementById('menu').appendChild(link);
-    }
-});
-</script>
+            // Create layer switcher container
+            const menu = document.getElementById('menu');
+            
+            // Only create layer switcher once
+            if (!document.getElementById('layer-switcher-container')) {
+                // Create layer switcher header
+                const layerSwitcherDiv = document.createElement('div');
+                layerSwitcherDiv.className = 'layer-switcher';
+                layerSwitcherDiv.id = 'layer-switcher-container';
+                
+                const header = document.createElement('h3');
+                header.textContent = 'Toggle Layers';
+                layerSwitcherDiv.appendChild(header);
+                
+                // Define layers for the switcher
+                const layers = [
+                    { id: 'Basemap', label: 'Basemap' },
+                    { id: 'Crime Data', label: 'Crime Data' },
+                    { id: 'Basemap + Crime', label: 'Basemap + Crime' },
+                    { id: 'Crime Hotspots', label: 'Crime Hotspots' }
+                ];
+                
+                // Create checkbox for each layer
+                layers.forEach(layer => {
+                    const controlDiv = document.createElement('div');
+                    controlDiv.className = 'layer-control';
+                    
+                    const checkbox = document.createElement('input');
+                    checkbox.type = 'checkbox';
+                    checkbox.id = `checkbox-${layer.id}`;
+                    checkbox.value = layer.id;
+                    
+                    const label = document.createElement('label');
+                    label.htmlFor = `checkbox-${layer.id}`;
+                    label.textContent = layer.label;
+                    
+                    // Add event listener to toggle layer visibility
+                    checkbox.addEventListener('change', (e) => {
+                        const layerId = e.target.value;
+                        const visibility = map.getLayoutProperty(layerId, 'visibility');
+                        
+                        if (visibility === 'visible') {
+                            map.setLayoutProperty(layerId, 'visibility', 'none');
+                        } else {
+                            map.setLayoutProperty(layerId, 'visibility', 'visible');
+                        }
+                        
+                        // Update checkbox state
+                        updateCheckboxState(layerId);
+                    });
+                    
+                    controlDiv.appendChild(checkbox);
+                    controlDiv.appendChild(label);
+                    layerSwitcherDiv.appendChild(controlDiv);
+                });
+                
+                // Insert layer switcher at the beginning of the menu
+                menu.insertBefore(layerSwitcherDiv, menu.firstChild);
+                
+                // Function to update checkbox state based on layer visibility
+                function updateCheckboxState(layerId) {
+                    const checkbox = document.getElementById(`checkbox-${layerId}`);
+                    const visibility = map.getLayoutProperty(layerId, 'visibility');
+                    checkbox.checked = (visibility === 'visible');
+                }
+                
+                // Initial update of checkbox states
+                layers.forEach(layer => {
+                    updateCheckboxState(layer.id);
+                });
+            }
+        });
+    </script>
 
 </body>
 </html>
